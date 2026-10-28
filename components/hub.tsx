@@ -5,7 +5,14 @@ import { ArrowDownToLine, ArrowRight, ArrowUpRight, Bell, BookOpen, Check, Check
 import { can, type Role } from '@/lib/permissions';
 import { type Context, type Snapshot, type AdminData, type Plan, type Restaurant, type Product, type Category, type Extra, type Hour, demoContext, makeDemo, emptySnapshot, emptyAdmin, money, date, weekdays } from '@/lib/data';
 
-const navigation=[
+type NavigationItem = {
+ id: string;
+ label: string;
+ icon: typeof LayoutDashboard;
+ section?: string;
+};
+
+const navigation: NavigationItem[]=[
  {id:'dashboard',label:'Visão geral',icon:LayoutDashboard,section:'PRINCIPAL'},
  {id:'products',label:'Produtos',icon:Package,section:'CARDÁPIO'},
  {id:'categories',label:'Categorias',icon:FolderOpen},
@@ -16,7 +23,7 @@ const navigation=[
  {id:'history',label:'Histórico',icon:History},
  {id:'settings',label:'Configurações',icon:Settings,section:'ESTABELECIMENTO'},
 ];
-const adminNavigation=[{id:'admin-restaurants',label:'Restaurantes',icon:Store},{id:'admin-users',label:'Usuários e acessos',icon:Users},{id:'admin-plans',label:'Planos e assinaturas',icon:CreditCard},{id:'admin-usage',label:'Utilização',icon:LayoutDashboard},{id:'admin-integrations',label:'Integrações',icon:Link2},{id:'admin-errors',label:'Histórico de erros',icon:CircleAlert}];
+const adminNavigation: NavigationItem[]=[{id:'admin-restaurants',label:'Restaurantes',icon:Store},{id:'admin-users',label:'Usuários e acessos',icon:Users},{id:'admin-plans',label:'Planos e assinaturas',icon:CreditCard},{id:'admin-usage',label:'Utilização',icon:LayoutDashboard},{id:'admin-integrations',label:'Integrações',icon:Link2},{id:'admin-errors',label:'Histórico de erros',icon:CircleAlert}];
 type EditRow=Partial<Product & Category & Extra & Hour & Restaurant & Plan>;
 type Drawer={type:string;row?:EditRow};
 async function request<T>(url:string,method='GET',body?:unknown):Promise<T> {
@@ -186,7 +193,7 @@ export default function Hub({demo}:{demo:boolean}) {
   <aside className={`sidebar ${mobile?'open':''}`}>
    <a className="brand" href="/" aria-label="WillD Hub, início"><span className="brand-mark">w<span>↗</span></span>WillD <b>Hub</b><span className="brand-dot"/></a>
    <div className="restaurant-switch"><div className="restaurant-avatar">W</div><div><span>SEU ESTABELECIMENTO</span><strong>{restaurant?.name??'Selecione uma conta'}</strong></div><ChevronDown size={15}/><select aria-label="Selecionar estabelecimento" value={restaurantId} onChange={e=>{setRestaurantId(e.target.value);navigate('dashboard');setAdmin(false);}}>{context?.restaurants.map(r=><option key={r.id} value={r.id}>{r.name}</option>)}</select></div>
-   <nav aria-label="Navegação principal">{(admin?adminNavigation:navigation).map(item=><div key={item.id}>{'section' in item&&typeof item.section==='string'&&<p className="nav-section">{item.section}</p>}<button className={`nav-item ${view===item.id?'active':''}`} onClick={()=>navigate(item.id)}><item.icon size={19} strokeWidth={1.7}/><span>{item.label}</span>{item.id==='integrations'&&<span className="nav-count">{data.integrations.filter(i=>i.status==='simulated').length}</span>}{view===item.id&&<span className="nav-active-dot"/>}</button></div>)}</nav>
+   <nav aria-label="Navegação principal">{(admin?adminNavigation:navigation).map(item=><div key={item.id}>{item.section ? <p className="nav-section">{item.section}</p> : null}<button className={`nav-item ${view===item.id?'active':''}`} onClick={()=>navigate(item.id)}><item.icon size={19} strokeWidth={1.7}/><span>{item.label}</span>{item.id==='integrations'&&<span className="nav-count">{data.integrations.filter(i=>i.status==='simulated').length}</span>}{view===item.id&&<span className="nav-active-dot"/>}</button></div>)}</nav>
    <div className="sidebar-bottom"><div className="plan-box"><div><span className="plan-icon"><Zap size={17}/></span><strong>{plan?.name??'Seu plano'}</strong><span className="plan-pill">{subscription?.status==='trialing'?'TESTE':'PLANO'}</span></div><p>{data.products.length} de {plan?.product_limit??0} produtos utilizados</p><div className="progress"><i style={{width:`${Math.min(100,data.products.length/(plan?.product_limit??1)*100)}%`}}/></div><button onClick={()=>{setAdmin(false);navigate('settings');}}>Conhecer meu plano <ArrowUpRight size={14}/></button></div>
    {(demo||context?.user.platform_role==='SUPER_ADMIN')&&<button className="admin-link" onClick={()=>{setAdmin(!admin);navigate(admin?'dashboard':'admin-restaurants');}}><ShieldCheck size={17}/>{admin?'Voltar ao restaurante':demo?'Administração · demonstração':'Administração WillD'}<ArrowUpRight size={14}/></button>}
    <button className="help-link" onClick={()=>setHelp(true)}><CircleHelp size={17}/>Precisa de uma mão?<ArrowUpRight size={14}/></button>
