@@ -1,1 +1,71 @@
+name: Validar WillD Hub
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: validate-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  app:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      # Trocar por npm ci quando o lockfile gerado tiver sido versionado.
+      - name: Instalar dependências
+        run: |
+          if [ -f package-lock.json ]; then npm ci; else npm install; fi
+      - name: Testes unitários
+        run: npm test
+      - name: Verificar TypeScript
+        run: npm run typecheck
+      - name: Compilar aplicação
+        run: npm run build
+        env:
+          NEXT_PUBLIC_DEMO_MODE: "true"
+      - name: Instalar Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Testar fluxos em desktop e celular
+        run: npm run test:e2e
+      - name: Guardar relatório de navegador e lockfile
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: validacao-app
+          path: |
+            playwright-report/
+            test-results/
+            package-lock.json
+          retention-days: 7
+  database:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+      - name: Criar Supabase local descartável
+        run: supabase start
+      - name: Testar isolamento, permissões e limites no PostgreSQL
+        run: |
+          set -o pipefail
+          supabase test db 2>&1 | tee database-tests.log
+      - name: Guardar resultado dos testes SQL
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: validacao-banco
+          path: database-tests.log
+          retention-days: 7
+      - name: Encerrar Supabase local
+        if: always()
+        run: supabase stop --no-backup
 
